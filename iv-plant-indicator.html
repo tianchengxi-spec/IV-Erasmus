@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IV Treatment — A/B Test</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --soil: #3d2b1f;
+    --soil-light: #5c4033;
+    --stem-green: #4a7c59;
+    --leaf-green: #6db37e;
+    --leaf-light: #a8d8b9;
+    --leaf-dark: #2f5e3f;
+    --drop-blue: #7eb8d4;
+    --drop-shine: #b8e0f0;
+    --bg-warm: #f5f0e8;
+    --bg-cream: #faf7f2;
+    --text-dark: #2c2417;
+    --text-muted: #8a7e6f;
+    --flower-pink: #e8a0b4;
+    --flower-center: #f2d06b;
+    --pot-terra: #c4835a;
+    --pot-dark: #a06840;
+    --pot-rim: #d4956a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg-warm);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--text-dark);
+    overflow: hidden;
+    position: relative;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 20% 50%, rgba(168, 216, 185, 0.12) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 30%, rgba(126, 184, 212, 0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 80%, rgba(196, 131, 90, 0.06) 0%, transparent 40%);
+    pointer-events: none;
+  }
+
+  .container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 20px 20px 24px;
+    position: relative;
+    z-index: 1;
+    max-height: 100vh;
+  }
+
+  /* ========== A/B SWITCH ========== */
+  .ab-switch {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(0,0,0,0.04);
+    padding: 6px 16px;
+    border-radius: 100px;
+  }
+
+  .ab-switch .label {
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-weight: 500;
+    color: var(--text-muted);
+    transition: color 0.3s;
+    cursor: pointer;
+  }
+
+  .ab-switch .label.active {
+    color: var(--text-dark);
+  }
+
+  .toggle-track {
+    width: 44px;
+    height: 24px;
+    background: var(--stem-green);
+    border-radius: 12px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+
+  .toggle-track.mode-b {
+    background: var(--text-dark);
+  }
+
+  .toggle-thumb {
+    width: 18px;
+    height: 18px;
+    background: white;
+    border-radius: 50%;
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    transition: transform 0.3s ease;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+  }
+
+  .toggle-track.mode-b .toggle-thumb {
+    transform: translateX(20px);
+  }
+
+  /* ========== HEADER ========== */
+  .header {
+    text-align: center;
+  }
+
+  .header h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    font-size: 1.6rem;
+    letter-spacing: 0.08em;
+    color: var(--text-dark);
+    margin-bottom: 4px;
+  }
+
+  .header .subtitle {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    font-weight: 400;
+  }
+
+  /* ========== VERSION A: PLANT (no timer) ========== */
+  .version-a { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .version-a.hidden { display: none; }
+
+  .scene {
+    width: 320px;
+    height: 380px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  .iv-line {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 2px;
+    height: 100px;
+    background: linear-gradient(to bottom, var(--drop-blue), transparent);
+    opacity: 0.4;
+  }
+
+  .iv-bag {
+    position: absolute;
+    top: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 48px;
+    background: linear-gradient(135deg, var(--drop-shine), var(--drop-blue));
+    border-radius: 8px 8px 4px 4px;
+    opacity: 0.6;
+    box-shadow: 0 4px 20px rgba(126, 184, 212, 0.3);
+  }
+
+  .iv-bag::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 20px;
+    height: 8px;
+    background: rgba(126, 184, 212, 0.4);
+    border-radius: 3px 3px 0 0;
+  }
+
+  .iv-bag .water-level {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to top, rgba(126, 184, 212, 0.8), rgba(184, 224, 240, 0.5));
+    border-radius: 0 0 4px 4px;
+    transition: height 0.5s ease;
+    height: 100%;
+  }
+
+  .drip-point {
+    position: absolute;
+    top: 42px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 6px;
+    height: 6px;
+    background: var(--drop-blue);
+    border-radius: 0 0 3px 3px;
+    z-index: 2;
+  }
+
+  .drop {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 8px;
+    height: 12px;
+    background: radial-gradient(ellipse at 40% 30%, var(--drop-shine), var(--drop-blue));
+    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+    opacity: 0;
+    z-index: 3;
+    filter: blur(0.3px);
+  }
+
+  .drop.falling { animation: dropFall 1.8s ease-in forwards; }
+
+  @keyframes dropFall {
+    0%   { top: 48px; opacity: 0; transform: translateX(-50%) scale(0.3); }
+    8%   { opacity: 1; transform: translateX(-50%) scale(1); }
+    15%  { top: 48px; opacity: 1; transform: translateX(-50%) scale(1.1); }
+    20%  { top: 48px; transform: translateX(-50%) scale(1); }
+    90%  { opacity: 0.8; top: 240px; transform: translateX(-50%) scale(1); }
+    95%  { opacity: 0.4; top: 258px; transform: translateX(-50%) scale(1.4, 0.5); }
+    100% { opacity: 0; top: 265px; transform: translateX(-50%) scale(2, 0.2); }
+  }
+
+  .splash {
+    position: absolute;
+    top: 260px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 20px;
+    height: 4px;
+    border-radius: 50%;
+    background: radial-gradient(ellipse, rgba(126, 184, 212, 0.5), transparent);
+    opacity: 0;
+    z-index: 3;
+  }
+
+  .splash.active { animation: splashAnim 0.6s ease-out forwards; }
+
+  @keyframes splashAnim {
+    0%   { opacity: 0; transform: translateX(-50%) scale(0.3); }
+    30%  { opacity: 0.7; transform: translateX(-50%) scale(1.5); }
+    100% { opacity: 0; transform: translateX(-50%) scale(2.5); }
+  }
+
+  .pot-area {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .pot {
+    width: 80px;
+    height: 54px;
+    background: linear-gradient(135deg, var(--pot-terra), var(--pot-dark));
+    border-radius: 6px 6px 16px 16px;
+    position: relative;
+    box-shadow:
+      inset -8px 0 16px rgba(0,0,0,0.1),
+      inset 8px 0 16px rgba(255,255,255,0.08),
+      0 8px 24px rgba(61, 43, 31, 0.2);
+    clip-path: polygon(5% 0%, 95% 0%, 85% 100%, 15% 100%);
+  }
+
+  .pot-rim {
+    width: 92px;
+    height: 12px;
+    background: linear-gradient(to bottom, var(--pot-rim), var(--pot-terra));
+    border-radius: 6px;
+    position: relative;
+    z-index: 1;
+    box-shadow: 0 2px 8px rgba(61, 43, 31, 0.15);
+  }
+
+  .soil {
+    position: absolute;
+    top: -4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 72px;
+    height: 20px;
+    background: radial-gradient(ellipse at 50% 80%, var(--soil), var(--soil-light));
+    border-radius: 50%;
+    z-index: 2;
+  }
+
+  .plant-svg {
+    position: absolute;
+    bottom: 72px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 200px;
+    height: 210px;
+    z-index: 2;
+  }
+
+  .stem-path {
+    fill: none;
+    stroke: var(--stem-green);
+    stroke-width: 3;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.8s ease;
+  }
+
+  .leaf {
+    fill: var(--leaf-green);
+    opacity: 0;
+    transform-origin: center;
+    transition: opacity 0.8s ease, transform 0.8s ease;
+  }
+
+  .leaf.visible { opacity: 1; }
+  .leaf-dark { fill: var(--leaf-dark); }
+  .leaf-light { fill: var(--leaf-light); }
+
+  .flower-group {
+    opacity: 0;
+    transform-origin: 120px 20px;
+    transition: opacity 1.2s ease, transform 1.2s ease;
+  }
+
+  .flower-group.blooming { opacity: 1; }
+  .petal { fill: var(--flower-pink); opacity: 0.85; }
+  .petal-center { fill: var(--flower-center); }
+
+  .completion-glow {
+    position: absolute;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(168, 216, 185, 0.3), transparent 70%);
+    opacity: 0;
+    transition: opacity 1.5s ease;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .completion-glow.active {
+    opacity: 1;
+    animation: gentlePulse 3s ease-in-out infinite;
+  }
+
+  @keyframes gentlePulse {
+    0%, 100% { transform: translateX(-50%) scale(1); opacity: 0.6; }
+    50% { transform: translateX(-50%) scale(1.1); opacity: 1; }
+  }
+
+  /* Plant progress bar (no numbers) */
+  .plant-progress {
+    width: 200px;
+    height: 3px;
+    background: rgba(0,0,0,0.06);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .plant-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--leaf-green), var(--stem-green));
+    border-radius: 2px;
+    transition: width 0.5s ease;
+    width: 0%;
+  }
+
+  .complete-message {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.1rem;
+    font-weight: 400;
+    color: var(--stem-green);
+    opacity: 0;
+    transition: opacity 1s ease;
+    letter-spacing: 0.05em;
+    text-align: center;
+    line-height: 1.5;
+    min-height: 1.6em;
+  }
+
+  .complete-message.visible { opacity: 1; }
+
+  .sparkle {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: var(--flower-center);
+    border-radius: 50%;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .sparkle.active { animation: sparkleFloat 2s ease-out forwards; }
+
+  @keyframes sparkleFloat {
+    0%   { opacity: 0; transform: translate(0, 0) scale(0); }
+    20%  { opacity: 1; transform: translate(var(--tx), var(--ty)) scale(1); }
+    100% { opacity: 0; transform: translate(calc(var(--tx) * 2), calc(var(--ty) * 2 - 30px)) scale(0.3); }
+  }
+
+  /* ========== VERSION B: TIMER ONLY ========== */
+  .version-b { display: none; flex-direction: column; align-items: center; gap: 24px; }
+  .version-b.visible { display: flex; }
+
+  .timer-only {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    min-height: 380px;
+  }
+
+  .timer-ring-wrap {
+    position: relative;
+    width: 260px;
+    height: 260px;
+  }
+
+  .timer-ring-svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+  }
+
+  .timer-ring-bg {
+    fill: none;
+    stroke: rgba(0,0,0,0.06);
+    stroke-width: 4;
+  }
+
+  .timer-ring-fill {
+    fill: none;
+    stroke: var(--text-dark);
+    stroke-width: 4;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.5s ease;
+  }
+
+  .timer-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .timer-big {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 4rem;
+    font-weight: 300;
+    color: var(--text-dark);
+    letter-spacing: 0.04em;
+    line-height: 1;
+  }
+
+  .timer-sub {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-top: 6px;
+  }
+
+  .timer-percent {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+    font-weight: 400;
+  }
+
+  .timer-complete-msg {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.1rem;
+    font-weight: 400;
+    color: var(--text-dark);
+    opacity: 0;
+    transition: opacity 1s ease;
+    letter-spacing: 0.05em;
+    min-height: 1.6em;
+  }
+
+  .timer-complete-msg.visible { opacity: 1; }
+
+  /* ========== SHARED CONTROLS ========== */
+  .controls {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .control-btn {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 10px 24px;
+    border: 1px solid rgba(0,0,0,0.12);
+    background: transparent;
+    color: var(--text-dark);
+    border-radius: 100px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 500;
+  }
+
+  .control-btn:hover {
+    background: var(--text-dark);
+    color: var(--bg-cream);
+    border-color: var(--text-dark);
+  }
+
+  .control-btn.active {
+    background: var(--stem-green);
+    color: white;
+    border-color: var(--stem-green);
+  }
+
+  .speed-slider {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+  }
+
+  .speed-slider input[type="range"] {
+    -webkit-appearance: none;
+    width: 80px;
+    height: 3px;
+    background: rgba(0,0,0,0.1);
+    border-radius: 2px;
+    outline: none;
+  }
+
+  .speed-slider input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    background: var(--stem-green);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(74, 124, 89, 0.3);
+  }
+
+  .time-setter {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+  }
+
+  .time-setter input {
+    font-family: 'DM Sans', sans-serif;
+    width: 52px;
+    padding: 6px 8px;
+    border: 1px solid rgba(0,0,0,0.12);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-dark);
+    font-size: 0.8rem;
+    text-align: center;
+    outline: none;
+    transition: border-color 0.3s;
+  }
+
+  .time-setter input:focus { border-color: var(--stem-green); }
+
+  .time-setter span {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <!-- A/B Toggle -->
+  <div class="ab-switch">
+    <span class="label active" id="labelA" onclick="switchMode('a')">A · Plant</span>
+    <div class="toggle-track" id="toggleTrack" onclick="toggleMode()">
+      <div class="toggle-thumb"></div>
+    </div>
+    <span class="label" id="labelB" onclick="switchMode('b')">B · Timer</span>
+  </div>
+
+  <div class="header">
+    <h1 id="headerTitle">Your Treatment Progress</h1>
+    <p class="subtitle" id="headerSub">Growing with you</p>
+  </div>
+
+  <!-- VERSION A: Plant -->
+  <div class="version-a" id="versionA">
+    <div class="scene" id="scene">
+      <div class="iv-bag">
+        <div class="water-level" id="waterLevel"></div>
+      </div>
+      <div class="iv-line"></div>
+      <div class="drip-point"></div>
+      <div class="splash" id="splash"></div>
+      <div class="completion-glow" id="glow"></div>
+
+      <svg class="plant-svg" viewBox="0 0 240 260" xmlns="http://www.w3.org/2000/svg">
+        <path class="stem-path" id="mainStem"
+          d="M 120 250 Q 120 220 118 190 Q 116 160 120 130 Q 124 100 120 70 Q 118 50 120 30"
+          stroke-dasharray="250" stroke-dashoffset="250" />
+        <path class="stem-path" id="branch1" d="M 118 190 Q 100 180 80 175"
+          stroke-dasharray="50" stroke-dashoffset="50" stroke-width="2" />
+        <path class="stem-path" id="branch2" d="M 120 160 Q 145 148 165 150"
+          stroke-dasharray="55" stroke-dashoffset="55" stroke-width="2" />
+        <path class="stem-path" id="branch3" d="M 119 130 Q 95 118 75 115"
+          stroke-dasharray="55" stroke-dashoffset="55" stroke-width="2" />
+        <path class="stem-path" id="branch4" d="M 121 100 Q 148 88 168 90"
+          stroke-dasharray="58" stroke-dashoffset="58" stroke-width="2" />
+        <path class="stem-path" id="branch5" d="M 120 75 Q 100 60 85 55"
+          stroke-dasharray="45" stroke-dashoffset="45" stroke-width="2" />
+
+        <g class="leaf" id="leaf1" style="transform: translate(0px, 10px) scale(0.5) rotate(15deg)">
+          <ellipse cx="72" cy="178" rx="20" ry="10" fill="var(--leaf-green)" />
+          <ellipse cx="68" cy="176" rx="16" ry="7" fill="var(--leaf-light)" opacity="0.4" />
+          <line x1="92" y1="178" x2="56" y2="178" stroke="var(--leaf-dark)" stroke-width="0.5" opacity="0.4" />
+        </g>
+        <g class="leaf" id="leaf2" style="transform: translate(0px, 10px) scale(0.5) rotate(-10deg)">
+          <ellipse cx="172" cy="148" rx="22" ry="11" fill="var(--leaf-green)" />
+          <ellipse cx="176" cy="146" rx="17" ry="8" fill="var(--leaf-light)" opacity="0.4" />
+          <line x1="150" y1="148" x2="192" y2="148" stroke="var(--leaf-dark)" stroke-width="0.5" opacity="0.4" />
+        </g>
+        <g class="leaf" id="leaf3" style="transform: translate(0px, 10px) scale(0.5) rotate(12deg)">
+          <ellipse cx="68" cy="115" rx="22" ry="11" fill="var(--leaf-green)" />
+          <ellipse cx="64" cy="113" rx="17" ry="8" fill="var(--leaf-light)" opacity="0.4" />
+          <line x1="90" y1="115" x2="48" y2="115" stroke="var(--leaf-dark)" stroke-width="0.5" opacity="0.4" />
+        </g>
+        <g class="leaf" id="leaf4" style="transform: translate(0px, 10px) scale(0.5) rotate(-8deg)">
+          <ellipse cx="175" cy="88" rx="24" ry="12" fill="var(--leaf-green)" />
+          <ellipse cx="179" cy="86" rx="18" ry="8" fill="var(--leaf-light)" opacity="0.4" />
+          <line x1="152" y1="88" x2="198" y2="88" stroke="var(--leaf-dark)" stroke-width="0.5" opacity="0.4" />
+        </g>
+        <g class="leaf" id="leaf5" style="transform: translate(0px, 8px) scale(0.5) rotate(10deg)">
+          <ellipse cx="78" cy="55" rx="18" ry="10" fill="var(--leaf-green)" />
+          <ellipse cx="74" cy="53" rx="14" ry="7" fill="var(--leaf-light)" opacity="0.4" />
+          <line x1="96" y1="55" x2="62" y2="55" stroke="var(--leaf-dark)" stroke-width="0.5" opacity="0.4" />
+        </g>
+        <g class="leaf" id="sprout1" style="transform: translate(0px, 5px) scale(0.3)">
+          <ellipse cx="110" cy="240" rx="10" ry="6" fill="var(--leaf-light)" />
+        </g>
+        <g class="leaf" id="sprout2" style="transform: translate(0px, 5px) scale(0.3)">
+          <ellipse cx="130" cy="240" rx="10" ry="6" fill="var(--leaf-light)" />
+        </g>
+
+        <g class="flower-group" id="flower">
+          <ellipse class="petal" cx="120" cy="14" rx="8" ry="14" transform="rotate(0, 120, 24)" />
+          <ellipse class="petal" cx="120" cy="14" rx="8" ry="14" transform="rotate(45, 120, 24)" />
+          <ellipse class="petal" cx="120" cy="14" rx="8" ry="14" transform="rotate(90, 120, 24)" />
+          <ellipse class="petal" cx="120" cy="14" rx="8" ry="14" transform="rotate(135, 120, 24)" />
+          <ellipse class="petal" cx="120" cy="14" rx="8" ry="14" transform="rotate(180, 120, 24)" />
+          <ellipse class="petal" cx="120" cy="14" rx="8" ry="14" transform="rotate(225, 120, 24)" />
+          <ellipse class="petal" cx="120" cy="14" rx="8" ry="14" transform="rotate(270, 120, 24)" />
+          <ellipse class="petal" cx="120" cy="14" rx="8" ry="14" transform="rotate(315, 120, 24)" />
+          <circle class="petal-center" cx="120" cy="24" r="7" />
+        </g>
+      </svg>
+
+      <div class="pot-area">
+        <div class="soil"></div>
+        <div class="pot-rim"></div>
+        <div class="pot"></div>
+      </div>
+    </div>
+
+    <div class="plant-progress">
+      <div class="plant-progress-fill" id="plantProgressBar"></div>
+    </div>
+    <div class="complete-message" id="completeMsgA">Treatment complete — your garden has bloomed</div>
+  </div>
+
+  <!-- VERSION B: Timer Only -->
+  <div class="version-b" id="versionB">
+    <div class="timer-only">
+      <div class="timer-ring-wrap">
+        <svg class="timer-ring-svg" viewBox="0 0 260 260">
+          <circle class="timer-ring-bg" cx="130" cy="130" r="120" />
+          <circle class="timer-ring-fill" id="timerRing" cx="130" cy="130" r="120"
+            stroke-dasharray="753.98"
+            stroke-dashoffset="753.98" />
+        </svg>
+        <div class="timer-center">
+          <div class="timer-big" id="timerBig">30:00</div>
+          <div class="timer-sub">remaining</div>
+          <div class="timer-percent" id="timerPercent">0%</div>
+        </div>
+      </div>
+    </div>
+    <div class="timer-complete-msg" id="completeMsgB">Treatment complete</div>
+  </div>
+
+  <!-- Shared Controls -->
+  <div class="controls">
+    <div class="time-setter">
+      <span>Duration</span>
+      <input type="number" id="timeMinutes" value="30" min="1" max="999" onchange="setDuration()">
+      <span>min</span>
+    </div>
+    <button class="control-btn" id="btnStart" onclick="startProcess()">Begin</button>
+    <button class="control-btn" id="btnPause" onclick="togglePause()">Pause</button>
+    <button class="control-btn" id="btnReset" onclick="resetProcess()">Reset</button>
+    <div class="speed-slider">
+      <span>Speed</span>
+      <input type="range" id="speedSlider" min="1" max="60" value="1" oninput="updateSpeed(this.value)">
+      <span id="speedLabel">1×</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  // State
+  let TOTAL_DURATION = 30 * 60;
+  let elapsed = 0;
+  let running = false;
+  let paused = false;
+  let speedMultiplier = 1;
+  let intervalId = null;
+  let dropIntervalId = null;
+  let currentMode = 'a';
+
+  // Plant elements
+  const mainStem = document.getElementById('mainStem');
+  const branches = ['branch1','branch2','branch3','branch4','branch5'].map(id => document.getElementById(id));
+  const leaves = ['leaf1','leaf2','leaf3','leaf4','leaf5'].map(id => document.getElementById(id));
+  const sprouts = [document.getElementById('sprout1'), document.getElementById('sprout2')];
+  const flower = document.getElementById('flower');
+  const waterLevel = document.getElementById('waterLevel');
+  const glow = document.getElementById('glow');
+  const splash = document.getElementById('splash');
+  const scene = document.getElementById('scene');
+  const plantProgressBar = document.getElementById('plantProgressBar');
+  const completeMsgA = document.getElementById('completeMsgA');
+
+  // Timer elements
+  const timerRing = document.getElementById('timerRing');
+  const timerBig = document.getElementById('timerBig');
+  const timerPercent = document.getElementById('timerPercent');
+  const completeMsgB = document.getElementById('completeMsgB');
+  const RING_CIRCUMFERENCE = 2 * Math.PI * 120; // ~753.98
+
+  const btnStart = document.getElementById('btnStart');
+
+  // A/B switching
+  function switchMode(mode) {
+    currentMode = mode;
+    const track = document.getElementById('toggleTrack');
+    const vA = document.getElementById('versionA');
+    const vB = document.getElementById('versionB');
+    const labelA = document.getElementById('labelA');
+    const labelB = document.getElementById('labelB');
+    const title = document.getElementById('headerTitle');
+    const sub = document.getElementById('headerSub');
+
+    if (mode === 'a') {
+      track.classList.remove('mode-b');
+      vA.classList.remove('hidden');
+      vB.classList.remove('visible');
+      labelA.classList.add('active');
+      labelB.classList.remove('active');
+      title.textContent = 'Your Treatment Progress';
+      sub.textContent = 'Growing with you';
+    } else {
+      track.classList.add('mode-b');
+      vA.classList.add('hidden');
+      vB.classList.add('visible');
+      labelA.classList.remove('active');
+      labelB.classList.add('active');
+      title.textContent = 'Your Treatment Progress';
+      sub.textContent = 'Time remaining';
+    }
+    updateDisplay();
+  }
+
+  function toggleMode() {
+    switchMode(currentMode === 'a' ? 'b' : 'a');
+  }
+
+  function getProgress() {
+    return Math.min(elapsed / TOTAL_DURATION, 1);
+  }
+
+  function formatTime(seconds) {
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  }
+
+  function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+  function easeOutBack(t) {
+    const c1 = 1.70158, c3 = c1 + 1;
+    return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+  }
+
+  function updateDisplay() {
+    const p = getProgress();
+
+    // Version A: plant
+    waterLevel.style.height = `${Math.max((1 - p) * 100, 0)}%`;
+    plantProgressBar.style.width = `${p * 100}%`;
+
+    const stemLength = 250;
+    const stemProgress = Math.min(p / 0.85, 1);
+    mainStem.style.strokeDashoffset = stemLength * (1 - easeOutCubic(stemProgress));
+
+    if (p > 0.02) {
+      sprouts.forEach(s => {
+        s.classList.add('visible');
+        s.style.opacity = 1;
+        s.style.transform = `translate(0px, 0px) scale(${Math.min(p * 5, 0.8)})`;
+      });
+    }
+
+    const branchThresholds = [0.15, 0.28, 0.42, 0.56, 0.68];
+    branches.forEach((branch, i) => {
+      const threshold = branchThresholds[i];
+      if (p > threshold) {
+        const branchP = Math.min((p - threshold) / 0.12, 1);
+        const len = parseFloat(branch.getAttribute('stroke-dasharray'));
+        branch.style.strokeDashoffset = len * (1 - easeOutCubic(branchP));
+        if (branchP > 0.4) {
+          const leafP = Math.min((branchP - 0.4) / 0.6, 1);
+          const leaf = leaves[i];
+          leaf.classList.add('visible');
+          leaf.style.opacity = easeOutCubic(leafP);
+          const scale = 0.5 + leafP * 0.5;
+          const rotateMatch = leaf.style.transform.match(/rotate\([^)]+\)/);
+          const rotate = rotateMatch ? rotateMatch[0] : '';
+          leaf.style.transform = `translate(0px, ${(1 - leafP) * 10}px) scale(${scale}) ${rotate}`;
+        }
+      }
+    });
+
+    if (p > 0.88) {
+      const flowerP = Math.min((p - 0.88) / 0.12, 1);
+      flower.classList.add('blooming');
+      flower.style.opacity = easeOutCubic(flowerP);
+      flower.style.transform = `scale(${0.3 + easeOutBack(flowerP) * 0.7})`;
+    }
+
+    // Version B: timer
+    const remaining = Math.max(TOTAL_DURATION - elapsed, 0);
+    timerBig.textContent = formatTime(remaining);
+    timerPercent.textContent = `${Math.round(p * 100)}%`;
+    timerRing.style.strokeDashoffset = RING_CIRCUMFERENCE * (1 - p);
+
+    // Completion
+    if (p >= 1) {
+      glow.classList.add('active');
+      completeMsgA.classList.add('visible');
+      completeMsgB.classList.add('visible');
+      timerBig.textContent = '0:00';
+      spawnCompletionSparkles();
+      stopProcess();
+    }
+  }
+
+  // Drips
+  function spawnDrop() {
+    if (!running || paused || currentMode !== 'a') return;
+    const drop = document.createElement('div');
+    drop.className = 'drop';
+    scene.appendChild(drop);
+    const offset = (Math.random() - 0.5) * 2;
+    drop.style.left = `calc(50% + ${offset}px)`;
+    requestAnimationFrame(() => drop.classList.add('falling'));
+    setTimeout(() => {
+      splash.classList.remove('active');
+      void splash.offsetWidth;
+      splash.classList.add('active');
+    }, 1600 / speedMultiplier);
+    setTimeout(() => drop.remove(), 2000);
+  }
+
+  function startDrops() {
+    if (dropIntervalId) clearInterval(dropIntervalId);
+    dropIntervalId = setInterval(spawnDrop, 2200 / speedMultiplier);
+    spawnDrop();
+  }
+
+  function stopDrops() {
+    if (dropIntervalId) { clearInterval(dropIntervalId); dropIntervalId = null; }
+  }
+
+  // Sparkles
+  let sparkleCount = 0;
+  function spawnCompletionSparkles() {
+    if (sparkleCount > 0 || currentMode !== 'a') return;
+    sparkleCount++;
+    for (let i = 0; i < 12; i++) {
+      setTimeout(() => {
+        const sparkle = document.createElement('div');
+        sparkle.className = 'sparkle';
+        const angle = (Math.PI * 2 * i) / 12;
+        const radius = 40 + Math.random() * 40;
+        sparkle.style.cssText = `
+          left: calc(50% + ${Math.cos(angle) * 20}px);
+          bottom: ${200 + Math.random() * 60}px;
+          --tx: ${Math.cos(angle) * radius}px;
+          --ty: ${Math.sin(angle) * radius}px;
+          background: ${Math.random() > 0.5 ? 'var(--flower-pink)' : 'var(--flower-center)'};
+        `;
+        scene.appendChild(sparkle);
+        requestAnimationFrame(() => sparkle.classList.add('active'));
+        setTimeout(() => sparkle.remove(), 2200);
+      }, i * 150);
+    }
+  }
+
+  // Controls
+  function startProcess() {
+    if (running && !paused) return;
+    if (paused) {
+      paused = false;
+      btnStart.textContent = 'Running';
+      btnStart.classList.add('active');
+      if (currentMode === 'a') startDrops();
+      return;
+    }
+    running = true;
+    paused = false;
+    btnStart.textContent = 'Running';
+    btnStart.classList.add('active');
+    completeMsgA.classList.remove('visible');
+    completeMsgB.classList.remove('visible');
+    glow.classList.remove('active');
+    if (currentMode === 'a') startDrops();
+    if (intervalId) clearInterval(intervalId);
+    intervalId = setInterval(() => {
+      if (!paused && running) { elapsed += speedMultiplier; updateDisplay(); }
+    }, 1000);
+  }
+
+  function togglePause() {
+    if (!running) return;
+    paused = !paused;
+    document.getElementById('btnPause').textContent = paused ? 'Resume' : 'Pause';
+    if (paused) {
+      stopDrops();
+      btnStart.textContent = 'Paused';
+      btnStart.classList.remove('active');
+    } else {
+      if (currentMode === 'a') startDrops();
+      btnStart.textContent = 'Running';
+      btnStart.classList.add('active');
+    }
+  }
+
+  function stopProcess() {
+    running = false;
+    paused = false;
+    stopDrops();
+    if (intervalId) { clearInterval(intervalId); intervalId = null; }
+    btnStart.textContent = 'Complete';
+    btnStart.classList.remove('active');
+  }
+
+  function resetProcess() {
+    stopProcess();
+    elapsed = 0;
+    sparkleCount = 0;
+    mainStem.style.strokeDashoffset = '250';
+    branches.forEach(b => { b.style.strokeDashoffset = b.getAttribute('stroke-dasharray'); });
+    leaves.forEach(l => { l.classList.remove('visible'); l.style.opacity = 0; });
+    sprouts.forEach(s => { s.classList.remove('visible'); s.style.opacity = 0; });
+    flower.classList.remove('blooming');
+    flower.style.opacity = 0;
+    flower.style.transform = 'scale(0.3)';
+    glow.classList.remove('active');
+    completeMsgA.classList.remove('visible');
+    completeMsgB.classList.remove('visible');
+    waterLevel.style.height = '100%';
+    plantProgressBar.style.width = '0%';
+    timerRing.style.strokeDashoffset = RING_CIRCUMFERENCE;
+    timerBig.textContent = formatTime(TOTAL_DURATION);
+    timerPercent.textContent = '0%';
+    btnStart.textContent = 'Begin';
+    btnStart.classList.remove('active');
+    document.getElementById('btnPause').textContent = 'Pause';
+    scene.querySelectorAll('.drop, .sparkle').forEach(el => el.remove());
+  }
+
+  function updateSpeed(val) {
+    speedMultiplier = parseInt(val);
+    document.getElementById('speedLabel').textContent = `${val}×`;
+    if (running && !paused && currentMode === 'a') startDrops();
+  }
+
+  function setDuration() {
+    const mins = parseInt(document.getElementById('timeMinutes').value) || 30;
+    TOTAL_DURATION = mins * 60;
+    if (!running) { elapsed = 0; updateDisplay(); }
+  }
+
+  // Init
+  updateDisplay();
+</script>
+
+</body>
+</html>
